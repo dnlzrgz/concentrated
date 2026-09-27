@@ -1,7 +1,12 @@
 [package]
 name = "concentrated"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
+authors = ["dnlzrgz <contact@dnlzrgz.com>"]
+description = "another pomodoro app for the terminal."
+license = "MIT"
+readme = "README.md"
+publish = false
 
 [dependencies]
 color-eyre = "0.6.5"

@@ -52,7 +52,8 @@ fn handle_key(code: KeyCode) -> Option<Message> {
     match code {
         KeyCode::Char('q') | KeyCode::Esc => Some(Message::Quit),
         KeyCode::Char(' ') | KeyCode::Enter => Some(Message::ToggleStartStop),
-        KeyCode::Char('s') | KeyCode::Right => Some(Message::Skip),
+        KeyCode::Char('s') => Some(Message::Skip),
+        KeyCode::Char('r') => Some(Message::Reset),
         _ => None,
     }
 }

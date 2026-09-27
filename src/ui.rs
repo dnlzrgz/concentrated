@@ -31,7 +31,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
 
     frame.render_widget(timer_big_text(model), big_text_row);
 
-    let controls = Paragraph::new("[space] start/stop · [s] skip · [q] quit")
+    let controls = Paragraph::new("[space] start/stop · [r] reset · [s] skip · [q] quit")
         .alignment(Alignment::Center)
         .block(
             Block::default()
@@ -45,7 +45,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
 fn timer_big_text(model: &Model) -> BigText<'static> {
     let secs_left = model.remaining().as_secs();
     let timer_text = format!("{:02}:{:02}", secs_left / 60, secs_left % 60);
-    let mut style = Style::new().black();
+    let mut style = Style::new();
     if !model.is_running() {
         style = style.add_modifier(Modifier::SLOW_BLINK);
     }

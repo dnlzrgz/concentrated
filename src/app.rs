@@ -69,6 +69,10 @@ impl Model {
                     State::Stopped => State::Running,
                 };
             }
+            Message::Reset => {
+                self.state = State::Stopped;
+                self.remaining = self.session_type.duration();
+            }
             Message::Skip => self.skip_session(),
             Message::Quit => self.should_quit = true,
         }
