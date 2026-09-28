@@ -45,7 +45,7 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
                 notify_session_end(prev_session)?;
             }
 
-            last_tick = Instant::now();
+            last_tick += tick_rate;
         }
     }
 
