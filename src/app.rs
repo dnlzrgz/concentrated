@@ -48,7 +48,11 @@ impl Model {
             remaining: session_type.duration(&config),
             config,
             session_type,
-            state: State::default(),
+            state: if config.auto_start {
+                State::Running
+            } else {
+                State::Stopped
+            },
             should_quit: false,
         }
     }
@@ -65,7 +69,7 @@ impl Model {
                 if self.state == State::Running {
                     self.remaining = self.remaining.saturating_sub(Duration::from_secs(1));
                     if self.remaining.is_zero() {
-                        self.skip_session();
+                        self.finish_session();
                     }
                 }
             }
@@ -93,6 +97,13 @@ impl Model {
         };
 
         self.remaining = self.session_duration()
+    }
+
+    fn finish_session(&mut self) {
+        self.skip_session();
+        if !self.config.auto_start {
+            self.state = State::Stopped;
+        }
     }
 
     pub fn should_quit(&self) -> bool {

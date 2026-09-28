@@ -33,6 +33,14 @@ pub struct Cli {
     #[arg(long="break", value_parser= parse_session_duration)]
     pub break_: Option<Duration>,
 
+    /// Start the timer immediately and keep running between sessions
+    #[arg(long, overrides_with = "no_auto_start")]
+    auto_start: bool,
+
+    /// Wait for manual start (default)
+    #[arg(long, overrides_with = "auto_start")]
+    no_auto_start: bool,
+
     /// Enable desktop notifications (on by default)
     #[arg(long, overrides_with = "no_notify")]
     notify: bool,
@@ -42,12 +50,20 @@ pub struct Cli {
     no_notify: bool,
 }
 
+fn flag(on: bool, off: bool) -> Option<bool> {
+    match (on, off) {
+        (true, _) => Some(true),
+        (_, true) => Some(false),
+        _ => None,
+    }
+}
+
 impl Cli {
     pub fn notify(&self) -> Option<bool> {
-        match (self.notify, self.no_notify) {
-            (true, _) => Some(true),
-            (_, true) => Some(false),
-            _ => None,
-        }
+        flag(self.notify, self.no_notify)
+    }
+
+    pub fn auto_start(&self) -> Option<bool> {
+        flag(self.auto_start, self.no_auto_start)
     }
 }
