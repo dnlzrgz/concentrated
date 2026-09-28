@@ -1,22 +1,26 @@
 use std::time::{Duration, Instant};
 
+use clap::Parser;
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use notify_rust::Notification;
 use ratatui::DefaultTerminal;
 
-use concentrated::{app::Model, message::Message, ui};
+use concentrated::{app::Model, cli::Cli, config::Config, message::Message, ui};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+    let cli = Cli::parse();
+    let config = Config::resolve(&cli);
+
     let terminal = ratatui::init();
-    let result = run(terminal);
+    let result = run(terminal, config);
     ratatui::restore();
     result
 }
 
-fn run(mut terminal: DefaultTerminal) -> Result<()> {
-    let mut model = Model::new();
+fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
+    let mut model = Model::new(config);
     let tick_rate = Duration::from_secs(1);
     let mut last_tick = Instant::now();
 
@@ -37,7 +41,7 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
         if last_tick.elapsed() >= tick_rate {
             let prev_session = model.session_label();
             model.update(Message::Tick)?;
-            if model.session_label() != prev_session {
+            if model.session_label() != prev_session && config.notifications {
                 notify_session_end(prev_session)?;
             }
 

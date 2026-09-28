@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::message::Message;
+use crate::{config::Config, message::Message};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 enum State {
@@ -17,10 +17,10 @@ enum SessionType {
 }
 
 impl SessionType {
-    fn duration(&self) -> Duration {
+    fn duration(&self, cfg: &Config) -> Duration {
         match self {
-            SessionType::Work => Duration::from_secs(25 * 60),
-            SessionType::Break => Duration::from_secs(5 * 60),
+            SessionType::Work => cfg.work_duration,
+            SessionType::Break => cfg.break_duration,
         }
     }
 
@@ -32,8 +32,9 @@ impl SessionType {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Model {
+    config: Config,
     state: State,
     session_type: SessionType,
     remaining: Duration,
@@ -41,18 +42,23 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let session_type = SessionType::default();
-        let remaining = session_type.duration();
         Self {
-            remaining,
+            remaining: session_type.duration(&config),
+            config,
             session_type,
-            ..Default::default()
+            state: State::default(),
+            should_quit: false,
         }
     }
 }
 
 impl Model {
+    fn session_duration(&self) -> Duration {
+        self.session_type.duration(&self.config)
+    }
+
     pub fn update(&mut self, msg: Message) -> color_eyre::Result<()> {
         match msg {
             Message::Tick => {
@@ -71,7 +77,7 @@ impl Model {
             }
             Message::Reset => {
                 self.state = State::Stopped;
-                self.remaining = self.session_type.duration();
+                self.remaining = self.session_duration();
             }
             Message::Skip => self.skip_session(),
             Message::Quit => self.should_quit = true,
@@ -86,7 +92,7 @@ impl Model {
             SessionType::Break => SessionType::Work,
         };
 
-        self.remaining = self.session_type.duration()
+        self.remaining = self.session_duration()
     }
 
     pub fn should_quit(&self) -> bool {
@@ -99,10 +105,6 @@ impl Model {
 
     pub fn remaining(&self) -> Duration {
         self.remaining
-    }
-
-    pub fn total(&self) -> Duration {
-        self.session_type.duration()
     }
 
     pub fn session_label(&self) -> &'static str {
