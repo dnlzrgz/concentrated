@@ -15,7 +15,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
 
     let mut timer_block = Block::default()
-        .title(model.session_label())
+        .title(format!(" {} ", model.session_label()))
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -38,13 +38,16 @@ pub fn view(model: &Model, frame: &mut Frame) {
 
     frame.render_widget(timer_big_text(model), big_text_row);
 
-    let controls = Paragraph::new("[space] start/stop · [r] reset · [s] skip · [q] quit")
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        );
+    let auto_start = if model.auto_start() { "on" } else { "off" };
+    let controls =
+        Paragraph::new("[space] start/stop · [r] reset · [s] skip · [a] auto-start · [q] quit")
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title_top(Line::from(format!(" {auto_start} ")).left_aligned()),
+            );
 
     frame.render_widget(controls, controls_area);
 }

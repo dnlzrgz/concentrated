@@ -84,6 +84,7 @@ impl Model {
                     State::Stopped => State::Running,
                 };
             }
+            Message::ToggleAutoStart => self.toggle_auto_start(),
             Message::Reset => {
                 self.state = State::Stopped;
                 self.remaining = self.session_duration();
@@ -93,6 +94,14 @@ impl Model {
         }
 
         Ok(())
+    }
+
+    /// Toggle auto-start. Enabling it while stopped starts the current session.
+    fn toggle_auto_start(&mut self) {
+        self.config.auto_start = !self.config.auto_start;
+        if self.config.auto_start && self.state == State::Stopped {
+            self.state = State::Running;
+        }
     }
 
     /// Moves to the next session. Used when a session runs out and when its skipped.
@@ -133,6 +142,10 @@ impl Model {
         self.state == State::Running
     }
 
+    pub fn auto_start(&self) -> bool {
+        self.config.auto_start
+    }
+
     pub fn remaining(&self) -> Duration {
         self.remaining
     }
@@ -149,7 +162,8 @@ impl Model {
 
         let current = match self.session_type {
             SessionType::Work => self.completed_work_sessions.saturating_add(1),
-            SessionType::Break | SessionType::LongBreak => self.completed_work_sessions,
+            SessionType::Break => self.completed_work_sessions,
+            SessionType::LongBreak => return None,
         };
 
         Some((current, self.config.sessions_before_long_break))
@@ -258,5 +272,66 @@ mod tests {
         assert_eq!(model.session_type, SessionType::Work);
         assert_eq!(model.session_progress(), Some((2, 4)));
         assert_eq!(model.remaining(), model.session_duration());
+    }
+
+    #[test]
+    fn session_progress_is_hidden_during_long_break() {
+        let mut model = model_with_sessions(1);
+        assert_eq!(model.session_progress(), Some((1, 1)));
+
+        skip(&mut model); // work 1 -> long break
+        assert_eq!(model.session_type, SessionType::LongBreak);
+        assert_eq!(model.session_progress(), None);
+    }
+
+    #[test]
+    fn session_progress_stays_visible_during_short_break() {
+        let mut model = model_with_sessions(2);
+
+        skip(&mut model); // work 1 -> break
+        assert_eq!(model.session_type, SessionType::Break);
+        assert_eq!(model.session_progress(), Some((1, 2)));
+    }
+
+    #[test]
+    fn enabling_auto_start_while_stopped_starts_the_session() {
+        let mut model = model_with_sessions(4);
+        assert!(!model.is_running());
+        assert!(!model.auto_start());
+
+        model.update(Message::ToggleAutoStart).unwrap();
+
+        assert!(model.auto_start());
+        assert!(model.is_running());
+    }
+
+    #[test]
+    fn disabling_auto_start_while_running_keeps_it_running() {
+        let mut model = Model::new(Config {
+            auto_start: true,
+            ..Config::default()
+        });
+        assert!(model.is_running());
+
+        model.update(Message::ToggleAutoStart).unwrap();
+
+        assert!(!model.auto_start());
+        assert!(model.is_running());
+    }
+
+    #[test]
+    fn toggling_auto_start_twice_restores_the_original_state() {
+        let mut model = Model::new(Config {
+            auto_start: true,
+            ..Config::default()
+        });
+        assert!(model.auto_start());
+        assert!(model.is_running());
+
+        model.update(Message::ToggleAutoStart).unwrap();
+        model.update(Message::ToggleAutoStart).unwrap();
+
+        assert!(model.auto_start());
+        assert!(model.is_running());
     }
 }

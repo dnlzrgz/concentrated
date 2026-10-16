@@ -56,6 +56,7 @@ fn handle_key(code: KeyCode) -> Option<Message> {
         KeyCode::Char(' ') | KeyCode::Enter => Some(Message::ToggleStartStop),
         KeyCode::Char('s') => Some(Message::Skip),
         KeyCode::Char('r') => Some(Message::Reset),
+        KeyCode::Char('a') => Some(Message::ToggleAutoStart),
         _ => None,
     }
 }

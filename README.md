@@ -19,7 +19,7 @@ By default a "cycle" is four 25-minute work sessions separated by 5-minute break
 | `--auto-start` / `--no-auto-start` | Start immediately and keep running between sessions | `--no-auto-start` |
 | `--notify` / `--no-notify` | Desktop notifications | `--notify` |
 
-Controls: `[space]` start/stop, `[r]` reset, `[s]` skip, `[q]` quit.
+Controls: `[space]` start/stop, `[r]` reset, `[s]` skip, `[a]` toggle auto-start, `[q]` quit.
 
 ### Examples
 
