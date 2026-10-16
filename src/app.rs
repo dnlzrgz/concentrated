@@ -14,6 +14,7 @@ enum SessionType {
     #[default]
     Work,
     Break,
+    LongBreak,
 }
 
 impl SessionType {
@@ -21,6 +22,7 @@ impl SessionType {
         match self {
             SessionType::Work => cfg.work_duration,
             SessionType::Break => cfg.break_duration,
+            SessionType::LongBreak => cfg.long_break_duration,
         }
     }
 
@@ -28,6 +30,7 @@ impl SessionType {
         match self {
             Self::Work => "work",
             Self::Break => "break",
+            Self::LongBreak => "long break",
         }
     }
 }
@@ -37,6 +40,7 @@ pub struct Model {
     config: Config,
     state: State,
     session_type: SessionType,
+    completed_work_sessions: u32,
     remaining: Duration,
     should_quit: bool,
 }
@@ -48,6 +52,7 @@ impl Model {
             remaining: session_type.duration(&config),
             config,
             session_type,
+            completed_work_sessions: 0,
             state: if config.auto_start {
                 State::Running
             } else {
@@ -83,24 +88,38 @@ impl Model {
                 self.state = State::Stopped;
                 self.remaining = self.session_duration();
             }
-            Message::Skip => self.skip_session(),
+            Message::Skip => self.advance_session(),
             Message::Quit => self.should_quit = true,
         }
 
         Ok(())
     }
 
-    fn skip_session(&mut self) {
-        self.session_type = match self.session_type {
-            SessionType::Work => SessionType::Break,
-            SessionType::Break => SessionType::Work,
-        };
+    /// Moves to the next session. Used when a session runs out and when its skipped.
+    fn advance_session(&mut self) {
+        match self.session_type {
+            SessionType::Work => {
+                self.completed_work_sessions += 1;
+                let sessions = self.config.sessions_before_long_break;
+                self.session_type =
+                    if sessions > 0 && self.completed_work_sessions.is_multiple_of(sessions) {
+                        SessionType::LongBreak
+                    } else {
+                        SessionType::Break
+                    };
+            }
+            SessionType::Break => self.session_type = SessionType::Work,
+            SessionType::LongBreak => {
+                self.completed_work_sessions = 0;
+                self.session_type = SessionType::Work;
+            }
+        }
 
         self.remaining = self.session_duration()
     }
 
     fn finish_session(&mut self) {
-        self.skip_session();
+        self.advance_session();
         if !self.config.auto_start {
             self.state = State::Stopped;
         }
@@ -120,5 +139,124 @@ impl Model {
 
     pub fn session_label(&self) -> &'static str {
         self.session_type.label()
+    }
+
+    /// Tracks current session within the cycle.
+    pub fn session_progress(&self) -> Option<(u32, u32)> {
+        if self.config.sessions_before_long_break == 0 {
+            return None;
+        }
+
+        let current = match self.session_type {
+            SessionType::Work => self.completed_work_sessions.saturating_add(1),
+            SessionType::Break | SessionType::LongBreak => self.completed_work_sessions,
+        };
+
+        Some((current, self.config.sessions_before_long_break))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn model_with_sessions(sessions_before_long_break: u32) -> Model {
+        Model::new(Config {
+            sessions_before_long_break,
+            ..Config::default()
+        })
+    }
+
+    fn skip(model: &mut Model) {
+        model.update(Message::Skip).unwrap();
+    }
+
+    #[test]
+    fn long_break_follows_the_last_work_session() {
+        let mut model = model_with_sessions(4);
+
+        for completed in 1..=3 {
+            assert_eq!(model.session_type, SessionType::Work);
+            skip(&mut model);
+            assert_eq!(model.session_type, SessionType::Break);
+            assert_eq!(model.completed_work_sessions, completed);
+            skip(&mut model);
+        }
+
+        assert_eq!(model.session_type, SessionType::Work);
+        skip(&mut model);
+        assert_eq!(model.session_type, SessionType::LongBreak);
+        assert_eq!(model.completed_work_sessions, 4);
+    }
+
+    #[test]
+    fn long_break_resets_the_cycle() {
+        let mut model = model_with_sessions(2);
+
+        skip(&mut model); // work 1 -> break
+        skip(&mut model); // break -> work 2
+        skip(&mut model); // work 2 -> long break
+        assert_eq!(model.session_type, SessionType::LongBreak);
+
+        skip(&mut model); // long break -> work 1 of the next cycle
+        assert_eq!(model.session_type, SessionType::Work);
+        assert_eq!(model.completed_work_sessions, 0);
+        assert_eq!(model.session_progress(), Some((1, 2)));
+    }
+
+    #[test]
+    fn zero_sessions_disables_long_breaks() {
+        let mut model = model_with_sessions(0);
+
+        for _ in 0..10 {
+            assert_eq!(model.session_type, SessionType::Work);
+            skip(&mut model);
+            assert_eq!(model.session_type, SessionType::Break);
+            skip(&mut model);
+        }
+
+        assert_eq!(model.session_progress(), None);
+    }
+
+    #[test]
+    fn session_progress_tracks_the_current_cycle() {
+        let mut model = model_with_sessions(4);
+        assert_eq!(model.session_progress(), Some((1, 4)));
+
+        skip(&mut model); // finish work 1 -> break
+        assert_eq!(model.session_progress(), Some((1, 4)));
+
+        skip(&mut model); // break -> work 2
+        assert_eq!(model.session_progress(), Some((2, 4)));
+
+        skip(&mut model); // finish work 2 -> break
+        assert_eq!(model.session_progress(), Some((2, 4)));
+    }
+
+    #[test]
+    fn long_break_uses_the_configured_duration() {
+        let long_break = Duration::from_secs(15 * 60);
+        let mut model = Model::new(Config {
+            long_break_duration: long_break,
+            sessions_before_long_break: 1,
+            ..Config::default()
+        });
+
+        skip(&mut model);
+        assert_eq!(model.session_type, SessionType::LongBreak);
+        assert_eq!(model.remaining(), long_break);
+    }
+
+    #[test]
+    fn reset_preserves_cycle_progress() {
+        let mut model = model_with_sessions(4);
+        skip(&mut model); // work 1 -> break
+        skip(&mut model); // break -> work 2
+
+        model.update(Message::Reset).unwrap();
+
+        assert_eq!(model.session_type, SessionType::Work);
+        assert_eq!(model.session_progress(), Some((2, 4)));
+        assert_eq!(model.remaining(), model.session_duration());
     }
 }

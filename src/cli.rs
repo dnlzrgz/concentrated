@@ -33,6 +33,14 @@ pub struct Cli {
     #[arg(long="break", value_parser= parse_session_duration)]
     pub break_: Option<Duration>,
 
+    /// Long break session duration, e.g. "15m"
+    #[arg(long, value_parser= parse_session_duration)]
+    pub long_break: Option<Duration>,
+
+    /// Work sessions before a long break, e.g. "4" (0 disables long breaks)
+    #[arg(long)]
+    pub sessions: Option<u32>,
+
     /// Start the timer immediately and keep running between sessions
     #[arg(long, overrides_with = "no_auto_start")]
     auto_start: bool,

@@ -2,6 +2,7 @@ use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Layout},
     style::{Modifier, Style},
+    text::Line,
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use tui_big_text::BigText;
@@ -13,11 +14,17 @@ pub fn view(model: &Model, frame: &mut Frame) {
     let [timer_area, controls_area] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
 
-    let timer_block = Block::default()
+    let mut timer_block = Block::default()
         .title(model.session_label())
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
+
+    if let Some((current, total)) = model.session_progress() {
+        timer_block =
+            timer_block.title_bottom(Line::from(format!(" {current}/{total} ")).centered());
+    }
+
     let inner_area = timer_block.inner(timer_area);
     frame.render_widget(timer_block, timer_area);
 

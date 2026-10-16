@@ -28,14 +28,12 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
         terminal.draw(|frame| ui::view(&model, frame))?;
 
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    if let Some(msg) = handle_key(key.code) {
-                        model.update(msg)?;
-                    }
-                }
-            }
+        if event::poll(timeout)?
+            && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+            && let Some(msg) = handle_key(key.code)
+        {
+            model.update(msg)?;
         }
 
         if last_tick.elapsed() >= tick_rate {
