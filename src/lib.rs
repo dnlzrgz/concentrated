@@ -3,3 +3,4 @@ pub mod cli;
 pub mod config;
 pub mod message;
 pub mod ui;
+pub mod watch_face;

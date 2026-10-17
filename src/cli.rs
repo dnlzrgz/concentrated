@@ -2,6 +2,8 @@ use std::{path::PathBuf, time::Duration};
 
 use clap::Parser;
 
+use crate::watch_face::WatchFace;
+
 const MAX_SESSION: Duration = Duration::from_secs(59 * 60);
 
 fn parse_session_duration(s: &str) -> Result<Duration, String> {
@@ -40,6 +42,10 @@ pub struct Cli {
     /// Work sessions before a long break, e.g. "4" (0 disables long breaks)
     #[arg(long)]
     pub sessions: Option<u32>,
+
+    /// Watch face style
+    #[arg(long, value_enum)]
+    pub face: Option<WatchFace>,
 
     /// Start the timer immediately and keep running between sessions
     #[arg(long, overrides_with = "no_auto_start")]

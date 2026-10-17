@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{config::Config, message::Message};
+use crate::{config::Config, message::Message, watch_face::WatchFace};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 enum State {
@@ -144,6 +144,10 @@ impl Model {
 
     pub fn auto_start(&self) -> bool {
         self.config.auto_start
+    }
+
+    pub fn watch_face(&self) -> WatchFace {
+        self.config.watch_face
     }
 
     pub fn remaining(&self) -> Duration {

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::cli::Cli;
+use crate::{cli::Cli, watch_face::WatchFace};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Config {
@@ -10,6 +10,7 @@ pub struct Config {
     pub sessions_before_long_break: u32,
     pub notifications: bool,
     pub auto_start: bool,
+    pub watch_face: WatchFace,
 }
 
 impl Default for Config {
@@ -21,6 +22,7 @@ impl Default for Config {
             sessions_before_long_break: 4,
             notifications: true,
             auto_start: false,
+            watch_face: WatchFace::Large,
         }
     }
 }
@@ -35,6 +37,7 @@ impl Config {
             sessions_before_long_break: cli.sessions.unwrap_or(d.sessions_before_long_break),
             notifications: cli.notify().unwrap_or(d.notifications),
             auto_start: cli.auto_start().unwrap_or(d.auto_start),
+            watch_face: cli.face.unwrap_or(d.watch_face),
         }
     }
 }
