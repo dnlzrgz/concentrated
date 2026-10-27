@@ -12,12 +12,20 @@ pub fn view(model: &Model, frame: &mut Frame) {
     let [timer_area, controls_area] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
 
-    let session_title = if model.is_running() {
-        format!(" {} · running ", model.session_label())
-    } else {
-        format!(" {} · paused ", model.session_label())
-    };
+    let mut parts = vec![
+        model.session_label(),
+        if model.is_running() {
+            "running"
+        } else {
+            "paused"
+        },
+    ];
 
+    if model.auto_start() {
+        parts.push("auto-start");
+    }
+
+    let session_title = format!(" {} ", parts.join(" · "));
     let mut timer_block = Block::default()
         .title(session_title)
         .title_alignment(Alignment::Center)
@@ -34,15 +42,13 @@ pub fn view(model: &Model, frame: &mut Frame) {
 
     model.watch_face().render(frame, inner_area, model);
 
-    let auto_start = if model.auto_start() { "on" } else { "off" };
     let controls =
         Paragraph::new("[space] start/stop · [r] reset · [s] skip · [a] auto-start · [q] quit")
             .alignment(Alignment::Center)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title_top(Line::from(format!(" {auto_start} ")).left_aligned()),
+                    .border_type(BorderType::Rounded),
             );
 
     frame.render_widget(controls, controls_area);
