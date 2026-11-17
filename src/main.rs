@@ -50,7 +50,11 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
             && key.kind == KeyEventKind::Press
             && let Some(msg) = handle_key(key.code)
         {
+            let was_running = model.is_running();
             model.update(msg)?;
+            if !was_running && model.is_running() {
+                last_tick = Instant::now();
+            }
         }
 
         if last_tick.elapsed() >= tick_rate {
