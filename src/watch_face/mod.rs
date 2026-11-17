@@ -9,6 +9,7 @@ use crate::app::Model;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, clap::ValueEnum, serde::Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[allow(clippy::enum_variant_names)]
 pub enum WatchFace {
     #[default]
     #[value(name = "digital-large")]

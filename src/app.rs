@@ -9,8 +9,8 @@ enum State {
     Stopped,
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-enum SessionType {
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum SessionType {
     #[default]
     Work,
     Break,
@@ -26,7 +26,7 @@ impl SessionType {
         }
     }
 
-    fn label(&self) -> &'static str {
+    pub fn label(&self) -> &'static str {
         match self {
             Self::Work => "work",
             Self::Break => "break",
@@ -34,7 +34,7 @@ impl SessionType {
         }
     }
 
-    fn id(&self) -> &'static str {
+    pub fn id(&self) -> &'static str {
         match self {
             Self::Work => "work",
             Self::Break => "break",
@@ -43,11 +43,11 @@ impl SessionType {
     }
 }
 
-/// A session whose timer ran out (skipping doesn't count). Values are session ids.
+/// A session whose timer ran out (skipping doesn't count).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionEnd {
-    pub finished: &'static str,
-    pub next: &'static str,
+    pub finished: SessionType,
+    pub next: SessionType,
 }
 
 #[derive(Debug)]
@@ -85,7 +85,7 @@ impl Model {
     }
 
     /// Returns `Some` when a session ended because its timer ran out.
-    pub fn update(&mut self, msg: Message) -> color_eyre::Result<Option<SessionEnd>> {
+    pub fn update(&mut self, msg: Message) -> Option<SessionEnd> {
         let mut ended = None;
         match msg {
             Message::Tick => {
@@ -111,7 +111,7 @@ impl Model {
             Message::Quit => self.should_quit = true,
         }
 
-        Ok(ended)
+        ended
     }
 
     /// Toggle auto-start. Enabling it while stopped starts the current session.
@@ -146,7 +146,7 @@ impl Model {
     }
 
     fn finish_session(&mut self) -> SessionEnd {
-        let finished = self.session_type.id();
+        let finished = self.session_type;
         self.advance_session();
         if !self.config.auto_start {
             self.state = State::Stopped;
@@ -154,7 +154,7 @@ impl Model {
 
         SessionEnd {
             finished,
-            next: self.session_type.id(),
+            next: self.session_type,
         }
     }
 
@@ -210,7 +210,7 @@ mod tests {
     }
 
     fn skip(model: &mut Model) {
-        model.update(Message::Skip).unwrap();
+        model.update(Message::Skip);
     }
 
     #[test]
@@ -222,18 +222,18 @@ mod tests {
             ..Config::default()
         });
 
-        assert_eq!(model.update(Message::Tick).unwrap(), None);
+        assert_eq!(model.update(Message::Tick), None);
         assert_eq!(
-            model.update(Message::Tick).unwrap(),
+            model.update(Message::Tick),
             Some(SessionEnd {
-                finished: "work",
-                next: "long-break",
+                finished: SessionType::Work,
+                next: SessionType::LongBreak,
             })
         );
 
         // Skipping and resetting never doesn't count.
-        assert_eq!(model.update(Message::Skip).unwrap(), None);
-        assert_eq!(model.update(Message::Reset).unwrap(), None);
+        assert_eq!(model.update(Message::Skip), None);
+        assert_eq!(model.update(Message::Reset), None);
     }
 
     #[test]
@@ -318,7 +318,7 @@ mod tests {
         skip(&mut model); // work 1 -> break
         skip(&mut model); // break -> work 2
 
-        model.update(Message::Reset).unwrap();
+        model.update(Message::Reset);
 
         assert_eq!(model.session_type, SessionType::Work);
         assert_eq!(model.session_progress(), Some((2, 4)));
@@ -350,7 +350,7 @@ mod tests {
         assert!(!model.is_running());
         assert!(!model.auto_start());
 
-        model.update(Message::ToggleAutoStart).unwrap();
+        model.update(Message::ToggleAutoStart);
 
         assert!(model.auto_start());
         assert!(model.is_running());
@@ -364,7 +364,7 @@ mod tests {
         });
         assert!(model.is_running());
 
-        model.update(Message::ToggleAutoStart).unwrap();
+        model.update(Message::ToggleAutoStart);
 
         assert!(!model.auto_start());
         assert!(model.is_running());
@@ -379,8 +379,8 @@ mod tests {
         assert!(model.auto_start());
         assert!(model.is_running());
 
-        model.update(Message::ToggleAutoStart).unwrap();
-        model.update(Message::ToggleAutoStart).unwrap();
+        model.update(Message::ToggleAutoStart);
+        model.update(Message::ToggleAutoStart);
 
         assert!(model.auto_start());
         assert!(model.is_running());

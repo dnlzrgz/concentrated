@@ -95,7 +95,7 @@ The timer can be drawn as a large, medium, or small block-character watch face:
 | `digital-medium` | 20 × 4 | Quadrant |
 | `digital-small` | 20 × 3 | Sextant |
 
-If the selected face does not fit the terminal, the timer falls back to plain `MM:SS` text. The face is selected at startup with `--face` (or `face` in a profile).
+The face is selected at startup with `--face` (or `face` in a profile).
 
 ### Examples
 

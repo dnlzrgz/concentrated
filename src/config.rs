@@ -26,6 +26,10 @@ pub fn parse_session_duration(s: &str) -> Result<Duration, String> {
         return Err("duration must be greater than zero".into());
     }
 
+    if d.subsec_nanos() != 0 {
+        return Err("duration must be whole seconds".into());
+    }
+
     if d > MAX_SESSION {
         return Err("duration cannot be greater than 59m".into());
     }
@@ -326,6 +330,7 @@ mod tests {
     #[test]
     fn session_durations_are_validated_like_on_the_cli() {
         assert!(FileConfig::parse("[profiles.a]\nwork = \"0s\"").is_err());
+        assert!(FileConfig::parse("[profiles.a]\nwork = \"1s 500ms\"").is_err());
         assert!(FileConfig::parse("[profiles.a]\nwork = \"60m\"").is_err());
         assert!(FileConfig::parse("[profiles.a]\nwork = \"59m\"").is_ok());
     }

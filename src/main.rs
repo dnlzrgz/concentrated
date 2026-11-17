@@ -5,17 +5,23 @@ use std::{
 
 use clap::Parser;
 use color_eyre::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use notify_rust::Notification;
 use ratatui::DefaultTerminal;
 
-use concentrated::{
+mod app;
+mod cli;
+mod config;
+mod hooks;
+mod message;
+mod ui;
+mod watch_face;
+
+use crate::{
     app::Model,
     cli::Cli,
     config::{Config, FileConfig},
-    hooks,
     message::Message,
-    ui,
 };
 
 fn main() -> Result<()> {
@@ -48,19 +54,19 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
         if event::poll(timeout)?
             && let Event::Key(key) = event::read()?
             && key.kind == KeyEventKind::Press
-            && let Some(msg) = handle_key(key.code)
+            && let Some(msg) = handle_key(key)
         {
             let was_running = model.is_running();
-            model.update(msg)?;
+            model.update(msg);
             if !was_running && model.is_running() {
                 last_tick = Instant::now();
             }
         }
 
         if last_tick.elapsed() >= tick_rate {
-            if let Some(end) = model.update(Message::Tick)? {
+            if let Some(end) = model.update(Message::Tick) {
                 if config.notifications {
-                    notify_session_end(&end.finished.replace('-', " "));
+                    notify_session_end(end.finished.label());
                 }
                 if let Some(command) = &config.on_session_end {
                     hooks::run(command, end);
@@ -74,9 +80,11 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
     Ok(())
 }
 
-fn handle_key(code: KeyCode) -> Option<Message> {
-    match code {
+fn handle_key(key: KeyEvent) -> Option<Message> {
+    match key.code {
         KeyCode::Char('q') | KeyCode::Esc => Some(Message::Quit),
+        // Raw mode turns Ctrl+C into a key press instead of SIGINT.
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Message::Quit),
         KeyCode::Char(' ') | KeyCode::Enter => Some(Message::ToggleStartStop),
         KeyCode::Char('s') => Some(Message::Skip),
         KeyCode::Char('r') => Some(Message::Reset),

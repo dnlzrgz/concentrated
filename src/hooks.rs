@@ -18,8 +18,8 @@ pub fn run(command: &str, end: SessionEnd) {
 
 fn spawn(command: &str, end: SessionEnd) -> io::Result<Child> {
     let mut cmd = shell(command);
-    cmd.env("CONCENTRATED_SESSION", end.finished)
-        .env("CONCENTRATED_NEXT_SESSION", end.next)
+    cmd.env("CONCENTRATED_SESSION", end.finished.id())
+        .env("CONCENTRATED_NEXT_SESSION", end.next.id())
         // The hook must not read keys or draw over the TUI.
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -54,10 +54,11 @@ fn shell(command: &str) -> Command {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use crate::app::SessionType;
 
     const END: SessionEnd = SessionEnd {
-        finished: "work",
-        next: "long-break",
+        finished: SessionType::Work,
+        next: SessionType::LongBreak,
     };
 
     #[test]
