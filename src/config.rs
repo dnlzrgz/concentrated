@@ -40,7 +40,7 @@ fn deserialize_duration<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Durati
         .map_err(D::Error::custom)
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub work_duration: Duration,
     pub break_duration: Duration,
@@ -49,6 +49,7 @@ pub struct Config {
     pub notifications: bool,
     pub auto_start: bool,
     pub watch_face: WatchFace,
+    pub on_session_end: Option<String>,
 }
 
 impl Default for Config {
@@ -61,6 +62,7 @@ impl Default for Config {
             notifications: true,
             auto_start: false,
             watch_face: WatchFace::DigitalLarge,
+            on_session_end: None,
         }
     }
 }
@@ -73,7 +75,7 @@ impl Config {
         let base = file
             .profiles
             .get(DEFAULT_PROFILE)
-            .copied()
+            .cloned()
             .unwrap_or_default();
 
         Ok(cli.or(selected).or(base).into_config())
@@ -81,7 +83,7 @@ impl Config {
 }
 
 /// Partial configuration.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Settings {
     #[serde(deserialize_with = "deserialize_duration")]
@@ -94,6 +96,7 @@ pub struct Settings {
     pub face: Option<WatchFace>,
     pub auto_start: Option<bool>,
     pub notify: Option<bool>,
+    pub on_session_end: Option<String>,
 }
 
 impl Settings {
@@ -106,6 +109,7 @@ impl Settings {
             face: self.face.or(lower.face),
             auto_start: self.auto_start.or(lower.auto_start),
             notify: self.notify.or(lower.notify),
+            on_session_end: self.on_session_end.or(lower.on_session_end),
         }
     }
 
@@ -119,6 +123,7 @@ impl Settings {
             notifications: self.notify.unwrap_or(d.notifications),
             auto_start: self.auto_start.unwrap_or(d.auto_start),
             watch_face: self.face.unwrap_or(d.watch_face),
+            on_session_end: self.on_session_end.filter(|c| !c.trim().is_empty()),
         }
     }
 }
@@ -164,7 +169,7 @@ impl FileConfig {
     fn selected_profile(&self, cli_profile: Option<&str>) -> Result<Settings> {
         let name = self.active_name(cli_profile);
         if let Some(settings) = self.profiles.get(name) {
-            return Ok(*settings);
+            return Ok(settings.clone());
         }
 
         if name == DEFAULT_PROFILE {

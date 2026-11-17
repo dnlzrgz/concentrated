@@ -1,6 +1,7 @@
 pub mod app;
 pub mod cli;
 pub mod config;
+pub mod hooks;
 pub mod message;
 pub mod ui;
 pub mod watch_face;

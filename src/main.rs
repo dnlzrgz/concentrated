@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use clap::Parser;
 use color_eyre::Result;
@@ -10,6 +13,7 @@ use concentrated::{
     app::Model,
     cli::Cli,
     config::{Config, FileConfig},
+    hooks,
     message::Message,
     ui,
 };
@@ -33,7 +37,7 @@ fn main() -> Result<()> {
 }
 
 fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
-    let mut model = Model::new(config);
+    let mut model = Model::new(config.clone());
     let tick_rate = Duration::from_secs(1);
     let mut last_tick = Instant::now();
 
@@ -50,10 +54,13 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
         }
 
         if last_tick.elapsed() >= tick_rate {
-            let prev_session = model.session_label();
-            model.update(Message::Tick)?;
-            if model.session_label() != prev_session && config.notifications {
-                notify_session_end(prev_session);
+            if let Some(end) = model.update(Message::Tick)? {
+                if config.notifications {
+                    notify_session_end(&end.finished.replace('-', " "));
+                }
+                if let Some(command) = &config.on_session_end {
+                    hooks::run(command, end);
+                }
             }
 
             last_tick += tick_rate;
@@ -74,10 +81,11 @@ fn handle_key(code: KeyCode) -> Option<Message> {
     }
 }
 
-/// Errors are ignored if a notification daemon is not running (SSH, container, etc).
+/// Errors are ignored if no daemon is running (SSH, container, etc). Uses a thread
+/// in case the daemon is slow.
 fn notify_session_end(finished_session: &str) {
-    let _ = Notification::new()
-        .summary("Pomodoro")
-        .body(&format!("{finished_session} session finished!"))
-        .show();
+    let body = format!("{finished_session} session finished!");
+    thread::spawn(move || {
+        let _ = Notification::new().summary("Pomodoro").body(&body).show();
+    });
 }

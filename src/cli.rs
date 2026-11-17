@@ -10,7 +10,7 @@ use crate::{
 #[derive(Debug, Parser)]
 #[command(version, about)]
 pub struct Cli {
-    /// Path to config file (<config dir>/concentrated/config.toml by default)
+    /// Path to config file (default: concentrated/config.toml)
     #[arg(long, short)]
     pub config: Option<PathBuf>,
 
@@ -50,7 +50,7 @@ pub struct Cli {
     #[arg(long, overrides_with = "auto_start")]
     no_auto_start: bool,
 
-    /// Enable desktop notifications ("on" by default)
+    /// Enable desktop notifications (default)
     #[arg(long, overrides_with = "no_notify")]
     notify: bool,
 
@@ -86,6 +86,7 @@ impl Cli {
             face: self.face,
             auto_start: self.auto_start(),
             notify: self.notify(),
+            on_session_end: None, // config file only
         }
     }
 }

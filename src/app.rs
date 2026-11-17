@@ -33,6 +33,21 @@ impl SessionType {
             Self::LongBreak => "long break",
         }
     }
+
+    fn id(&self) -> &'static str {
+        match self {
+            Self::Work => "work",
+            Self::Break => "break",
+            Self::LongBreak => "long-break",
+        }
+    }
+}
+
+/// A session whose timer ran out (skipping doesn't count). Values are session ids.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionEnd {
+    pub finished: &'static str,
+    pub next: &'static str,
 }
 
 #[derive(Debug)]
@@ -48,16 +63,17 @@ pub struct Model {
 impl Model {
     pub fn new(config: Config) -> Self {
         let session_type = SessionType::default();
+        let state = if config.auto_start {
+            State::Running
+        } else {
+            State::Stopped
+        };
         Self {
             remaining: session_type.duration(&config),
             config,
             session_type,
             completed_work_sessions: 0,
-            state: if config.auto_start {
-                State::Running
-            } else {
-                State::Stopped
-            },
+            state,
             should_quit: false,
         }
     }
@@ -68,13 +84,15 @@ impl Model {
         self.session_type.duration(&self.config)
     }
 
-    pub fn update(&mut self, msg: Message) -> color_eyre::Result<()> {
+    /// Returns `Some` when a session ended because its timer ran out.
+    pub fn update(&mut self, msg: Message) -> color_eyre::Result<Option<SessionEnd>> {
+        let mut ended = None;
         match msg {
             Message::Tick => {
                 if self.state == State::Running {
                     self.remaining = self.remaining.saturating_sub(Duration::from_secs(1));
                     if self.remaining.is_zero() {
-                        self.finish_session();
+                        ended = Some(self.finish_session());
                     }
                 }
             }
@@ -93,7 +111,7 @@ impl Model {
             Message::Quit => self.should_quit = true,
         }
 
-        Ok(())
+        Ok(ended)
     }
 
     /// Toggle auto-start. Enabling it while stopped starts the current session.
@@ -127,10 +145,16 @@ impl Model {
         self.remaining = self.session_duration()
     }
 
-    fn finish_session(&mut self) {
+    fn finish_session(&mut self) -> SessionEnd {
+        let finished = self.session_type.id();
         self.advance_session();
         if !self.config.auto_start {
             self.state = State::Stopped;
+        }
+
+        SessionEnd {
+            finished,
+            next: self.session_type.id(),
         }
     }
 
@@ -187,6 +211,29 @@ mod tests {
 
     fn skip(model: &mut Model) {
         model.update(Message::Skip).unwrap();
+    }
+
+    #[test]
+    fn only_a_timer_running_out_reports_a_session_end() {
+        let mut model = Model::new(Config {
+            work_duration: Duration::from_secs(2),
+            sessions_before_long_break: 1,
+            auto_start: true,
+            ..Config::default()
+        });
+
+        assert_eq!(model.update(Message::Tick).unwrap(), None);
+        assert_eq!(
+            model.update(Message::Tick).unwrap(),
+            Some(SessionEnd {
+                finished: "work",
+                next: "long-break",
+            })
+        );
+
+        // Skipping and resetting never doesn't count.
+        assert_eq!(model.update(Message::Skip).unwrap(), None);
+        assert_eq!(model.update(Message::Reset).unwrap(), None);
     }
 
     #[test]

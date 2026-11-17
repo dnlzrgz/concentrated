@@ -65,6 +65,7 @@ See [`config.example.toml`](config.example.toml).
 - Profile keys have the same names and values as the command-line options (`--long-break` is `long-break`, `--notify`/`--no-notify` is `notify = true`/`false`). All of them are optional, and durations are limited to 1s to 59m.
 - `[profiles.default]` is optional. If it's missing, the built-in defaults are the base.
 - Unknown keys or types are treated as errors (e.g. `wrk` instead of `work`).
+- `on-session-end` has no command-line option, see [Hooks](#hooks).
 
 ### Precedence
 
@@ -79,6 +80,10 @@ From lowest to highest:
 concentrated -p deep-work
 concentrated --list-profiles
 ```
+
+### Hooks
+
+`on-session-end` is a shell command that runs when a session's timer runs out (e.g. to play a sound). Like any other key it can be set per profile and is inherited from `[profiles.default]`; an empty string (`""`) disables an inherited hook. Failures are silent.
 
 ### Watch faces
 

@@ -13,6 +13,8 @@ sessions = 4  # work sessions before a long break (0 disables long breaks)
 face = "digital-large"  # digital-large, digital-medium or digital-small
 auto-start = false
 notify = true
+# Shell command run when a session's timer runs out.
+# on-session-end = "notify-send \"$CONCENTRATED_SESSION finished, next: $CONCENTRATED_NEXT_SESSION\""
 
 [profiles.work]
 work = "45m"
