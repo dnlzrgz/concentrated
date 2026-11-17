@@ -53,7 +53,7 @@ fn run(mut terminal: DefaultTerminal, config: Config) -> Result<()> {
             let prev_session = model.session_label();
             model.update(Message::Tick)?;
             if model.session_label() != prev_session && config.notifications {
-                notify_session_end(prev_session)?;
+                notify_session_end(prev_session);
             }
 
             last_tick += tick_rate;
@@ -74,11 +74,10 @@ fn handle_key(code: KeyCode) -> Option<Message> {
     }
 }
 
-fn notify_session_end(finished_session: &str) -> Result<()> {
-    Notification::new()
+/// Errors are ignored if a notification daemon is not running (SSH, container, etc).
+fn notify_session_end(finished_session: &str) {
+    let _ = Notification::new()
         .summary("Pomodoro")
         .body(&format!("{finished_session} session finished!"))
-        .show()?;
-
-    Ok(())
+        .show();
 }
