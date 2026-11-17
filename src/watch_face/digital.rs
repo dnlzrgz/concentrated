@@ -9,17 +9,17 @@ use crate::{
 
 fn pixel_size(face: WatchFace) -> PixelSize {
     match face {
-        WatchFace::Large => PixelSize::Full,
-        WatchFace::Medium => PixelSize::Quadrant,
-        WatchFace::Small => PixelSize::Sextant,
+        WatchFace::DigitalLarge => PixelSize::Full,
+        WatchFace::DigitalMedium => PixelSize::Quadrant,
+        WatchFace::DigitalSmall => PixelSize::Sextant,
     }
 }
 
 fn glyph_height(face: WatchFace) -> u16 {
     match face {
-        WatchFace::Large => 8,
-        WatchFace::Medium => 4,
-        WatchFace::Small => 3,
+        WatchFace::DigitalLarge => 8,
+        WatchFace::DigitalMedium => 4,
+        WatchFace::DigitalSmall => 3,
     }
 }
 

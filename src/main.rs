@@ -6,12 +6,25 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use notify_rust::Notification;
 use ratatui::DefaultTerminal;
 
-use concentrated::{app::Model, cli::Cli, config::Config, message::Message, ui};
+use concentrated::{
+    app::Model,
+    cli::Cli,
+    config::{Config, FileConfig},
+    message::Message,
+    ui,
+};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     let cli = Cli::parse();
-    let config = Config::resolve(&cli);
+    let file = FileConfig::load(cli.config.as_deref())?;
+
+    if cli.list_profiles {
+        print!("{}", file.list_profiles(cli.profile.as_deref()));
+        return Ok(());
+    }
+
+    let config = Config::resolve(&file, cli.profile.as_deref(), cli.settings())?;
 
     let terminal = ratatui::init();
     let result = run(terminal, config);

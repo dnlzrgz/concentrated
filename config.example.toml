@@ -1,0 +1,26 @@
+# Copy to ~/.config/concentrated/config.toml
+# Every key is optional. Durations are 1s to 59m, e.g. "25m" or "1m 30s".
+
+# Profile used when --profile isn't used (default: "default").
+default-profile = "work"
+
+# Every other profile inherits the keys it doesn't set itself.
+[profiles.default]
+work = "25m"
+break = "5m"
+long-break = "15m"
+sessions = 4  # work sessions before a long break (0 disables long breaks)
+face = "digital-large"  # digital-large, digital-medium or digital-small
+auto-start = false
+notify = true
+
+[profiles.work]
+work = "45m"
+break = "10m"
+
+# Names with spaces work, but need quoting on the command line: -p "deep work"
+[profiles.deep-work]
+work = "55m"
+break = "15m"
+sessions = 2
+auto-start = true

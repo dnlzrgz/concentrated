@@ -2,30 +2,25 @@ use std::{path::PathBuf, time::Duration};
 
 use clap::Parser;
 
-use crate::watch_face::WatchFace;
-
-const MAX_SESSION: Duration = Duration::from_secs(59 * 60);
-
-fn parse_session_duration(s: &str) -> Result<Duration, String> {
-    let d = humantime::parse_duration(s).map_err(|e| e.to_string())?;
-
-    if d.is_zero() {
-        return Err("duration must be greater than zero".into());
-    }
-
-    if d > MAX_SESSION {
-        return Err("duration cannot be greater than 59m".into());
-    }
-
-    Ok(d)
-}
+use crate::{
+    config::{Settings, parse_session_duration},
+    watch_face::WatchFace,
+};
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
 pub struct Cli {
-    /// Path to config file (overrides default location)
+    /// Path to config file (<config dir>/concentrated/config.toml by default)
     #[arg(long, short)]
     pub config: Option<PathBuf>,
+
+    /// Profile to use
+    #[arg(long, short)]
+    pub profile: Option<String>,
+
+    /// List the profiles and exit
+    #[arg(long)]
+    pub list_profiles: bool,
 
     /// Work session duration, e.g. "25m"
     #[arg(long, value_parser= parse_session_duration)]
@@ -55,7 +50,7 @@ pub struct Cli {
     #[arg(long, overrides_with = "auto_start")]
     no_auto_start: bool,
 
-    /// Enable desktop notifications (on by default)
+    /// Enable desktop notifications ("on" by default)
     #[arg(long, overrides_with = "no_notify")]
     notify: bool,
 
@@ -79,5 +74,18 @@ impl Cli {
 
     pub fn auto_start(&self) -> Option<bool> {
         flag(self.auto_start, self.no_auto_start)
+    }
+
+    /// The flags the user passed, as the highest-priority settings layer.
+    pub fn settings(&self) -> Settings {
+        Settings {
+            work: self.work,
+            break_: self.break_,
+            long_break: self.long_break,
+            sessions: self.sessions,
+            face: self.face,
+            auto_start: self.auto_start(),
+            notify: self.notify(),
+        }
     }
 }

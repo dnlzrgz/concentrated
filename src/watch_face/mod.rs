@@ -7,15 +7,16 @@ use ratatui::{
 
 use crate::app::Model;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, clap::ValueEnum, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum WatchFace {
     #[default]
-    #[value(name = "large")]
-    Large,
-    #[value(name = "medium")]
-    Medium,
-    #[value(name = "small")]
-    Small,
+    #[value(name = "digital-large")]
+    DigitalLarge,
+    #[value(name = "digital-medium")]
+    DigitalMedium,
+    #[value(name = "digital-small")]
+    DigitalSmall,
 }
 
 impl WatchFace {
